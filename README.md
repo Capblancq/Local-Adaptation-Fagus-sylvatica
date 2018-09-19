@@ -1,4 +1,4 @@
-Local adaptation in Fagus sylvatica in the French Alps
+Local adaptation of Fagus sylvatica in the French Alps
 
 1/ File script_RDA_Fagus.R is the script used to produce all the results and figures of the study described in Capblancq et al. (in review)
 
