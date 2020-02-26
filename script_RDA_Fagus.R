@@ -1,7 +1,3 @@
-######################
-## RDA Fagus APPATS ##
-######################
-
 library(vegan)
 library(robust)
 library(qvalue)
@@ -31,8 +27,7 @@ row.names(GenData)<- unlist(lapply(strsplit(as.character(read.table("batch_1.pli
 colnames(GenData) <- as.character(read.table("batch_1.plink.map", header=F)[,2])
 
 # Removing unused population of Ste Baumes and replicates
-GenData<-GenData[-c(grep(pattern = "Bis", row.names(GenData)), grep(pattern = "Ter", row.names(GenData))),]
-GenData<-GenData[-c(grep(pattern = "SB", row.names(GenData))),]
+GenData<-GenData[-c(grep(pattern = "Bis", row.names(GenData)), grep(pattern = "Ter", row.names(GenData)), grep(pattern = "SB", row.names(GenData))),]
 
 # Samples information
 info_inds<-read.table("Infos_Individus.csv", header=T, sep=",")
@@ -68,7 +63,10 @@ for (i in 1:ncol(GenData))
 FreqData<-as.data.frame(apply(GenData, 2, function(x) by(x, as.character(info_inds$pop), mean))/2)
 freq_mean<-apply(FreqData, 2, mean)
 FreqData<-FreqData[,-which(freq_mean>=0.99 | freq_mean<=0.01)]
-
+                              
+##############
+                              
+                              
 #####################
 #### partial RDA ####
 
@@ -95,6 +93,9 @@ RDAfull <- rda(FreqData ~ etp_mean + mind_mean + prec_sum + tmax_mean + tmin_mea
 anova(RDAfull)
 RsquareAdj(RDAfull)
 
+#####################
+                              
+                              
 #################
 #### RDAdapt ####
 
@@ -212,6 +213,9 @@ ggplot(data=delta_tot) +
   guides(fill=guide_legend(title="Loci")) +
   xlab("Delta allelic frequencies")
 dev.off()
+                   
+#################                   
+                   
 
 #########################
 #### RDA on outliers ####
@@ -229,8 +233,9 @@ ggplot() +
   theme_bw() +
   theme(legend.position="none")
 dev.off()
-
-
+                   
+#########################
+                   
 ############################
 #### Adaptive gradients ####
 
@@ -319,7 +324,9 @@ p4 <- ggplot() +
 pdf("./RDAindex_FuturePresent_Fagus.pdf", width = 8, height = 8)
 ggarrange(p1, p2, p3, p4, ncol=2, nrow=2, common.legend = FALSE)
 dev.off()
-
+                     
+############################
+            
 ##############################################################################################################################
 #### Distribution of RDA1 and RDA2 scores in current and futur conditions across the current locations of Fagus sylvatica ####
 
@@ -352,195 +359,179 @@ pdf("./RDAindex_FuturePresent_Fagus.pdf", width = 4, height = 4)
 ggarrange(p1,p2, ncol=1, nrow=2, common.legend = TRUE, legend = "right")
 dev.off()
 
-#########################################
-#### Favourable pixels present/futur ####
-
-rda1<-var_env[[1]]
-rda1[]<-as.vector(RDA1_proj)
-rda2<-var_env[[1]]
-rda2[]<-as.vector(RDA2_proj)
-
-fav_pres_RDA<-var_env[[1]]
-fav_pres_RDA[]<-NA
-fav_pres_RDA[which(rda1[]>quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[1] & rda1[]<quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[2] & rda2[]>quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[1] & rda2[]<quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[2])]<-1
-
-rda1_fu<-var_env[[1]]
-rda1_fu[]<-as.vector(RDA1_proj_fu)
-rda2_fu<-var_env[[1]]
-rda2_fu[]<-as.vector(RDA2_proj_fu)
-
-fav_fut_RDA<-var_env[[1]]
-fav_fut_RDA[]<-NA
-fav_fut_RDA[which(rda1_fu[]>quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[1] & rda1_fu[]<quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[2] & rda2_fu[]>quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[1] & rda2_fu[]<quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[2])]<-1
-
-plot(fav_pres_RDA)
-plot(fav_fut_RDA)
-
-coord_fu<-as.data.frame(rasterToPoints(fav_fut_RDA))
-coord_fu[,3]<-"futur"
-coord_pres<-as.data.frame(rasterToPoints(fav_pres_RDA))
-coord_pres[,3]<-"present"
-table<-rbind(coord_pres, coord_fu)
-
-nochange<-var_env[[1]]
-nochange[]<-NA
-nochange[][which(fav_pres_RDA[]==1 & fav_fut_RDA[]==1)]<-1
-
-lost<-var_env[[1]]
-lost[]<-NA
-lost[][which(fav_pres_RDA[]==1 & is.na(fav_fut_RDA[]))]<-1
-
-new<-var_env[[1]]
-new[]<-NA
-new[][which(is.na(fav_pres_RDA[]) & fav_fut_RDA[]==1)]<-1
-
-country<-crop(shapefile("./country.shp"), extent(c(4.6,8,42.8,46.7)))
-cities<-crop(shapefile("./cities.shp"), extent(c(4.6,8,42.8,46.7)))
-
-pdf("./LossWin_RDAprojection.pdf", width = 5, height = 6.5)
-plot(nochange, col="grey", xlim=c(4.6,8), ylim=c(42.6,46.7), legend=F)
-plot(lost, add = TRUE, col="#D55E00", xlim=c(4.6,8), ylim=c(42.6,46.7), legend=F)
-lines(country, col="black",lty=1, xlim=c(4.6,8), ylim=c(42.6,46.7))
-points(cities, col="black", pch=16, cex=0.7)
-text(cities, cities$CITY_NAME, pos=3, cex=0.8)
-plot(new, add = TRUE, col="forestgreen", xlim=c(4.6,8), ylim=c(42.6,46.7), legend=F)
-dev.off()
-
-#####################################################
-#### Species response to climate change for RDA1 ####
-
-## Difference present/futur RDA1
-diff_rda1<-var_env[[1]]
-diff_rda1[]<-as.vector(RDA1_proj)
-diff_rda1_fu<-var_env[[1]]
-diff_rda1_fu[]<-as.vector(RDA1_proj_fu)
-diff_rda1[which(rda1_fu[]<quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[1] | rda1_fu[]>quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[2] | rda2_fu[]<quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[1] | rda2_fu[]>quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[2])] <- NA
-
-diff_rda1<-rasterToPoints(crop(diff_rda1_fu-diff_rda1, extent(4.7, 8.199158, 42.6565, 46.85202)))
+##############################################################################################################################                     
+                     
+#############################################################################
+#### Genetic Offset based on RDA scores in current and future conditions ####
 
 colors <- colorRampPalette(c("#FFEDA0", "red"))
 
+## Offset present/future for RDA1
+proj_rda1<-var_env[[1]]
+proj_rda1[]<-as.vector(RDA1_proj)
+proj_rda1 <- mask(proj_rda1, range)
+proj_rda1_fu<-var_env[[1]]
+proj_rda1_fu[]<-as.vector(RDA1_proj_fu)
+proj_rda1_fu <- mask(proj_rda1_fu, range)
+diff_rda1<-rasterToPoints(crop(proj_rda1_fu-proj_rda1, extent(4.7, 8.199158, 42.6565, 46.85202)))
+
 p1 <- ggplot() + 
+  geom_polygon(data=country, aes(long, lat, group = group), colour = NA, fill = "gray95", size = 0.3) +
   geom_raster(aes(x=diff_rda1[,1],y=diff_rda1[,2],fill=cut(abs(diff_rda1[,3]), breaks=c(0,1,2,3,4)))) + 
-  scale_fill_manual(values=colors(5)[c(1,2,5)]) +
-  geom_polygon(aes(x = country.df$long, y = country.df$lat, group=country.df$group), color="black", alpha=0) +
-  geom_point(aes(x= cities@coords[,1], y=cities@coords[,2]), size=1) +
-  geom_text(aes(x= cities@coords[,1]+0.05, y=cities@coords[,2]+0.05, label=cities$CITY_NAME), size=3.5) +
+  scale_fill_manual(values=colors(4)) +
+  geom_polygon(data=country, aes(long, lat, group = group), colour = "gray25", fill = NA, size = 0.3) +
   xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Change of genetic composition") +
-  guides(fill=guide_legend(title="S")) +
+  guides(fill=guide_legend(title="Genetic offset")) +
   theme_bw() +
   theme(panel.grid.major = element_blank())
 
+## Offset present/future for RDA2
+proj_rda2<-var_env[[1]]
+proj_rda2[]<-as.vector(RDA2_proj)
+proj_rda2 <- mask(proj_rda2, range)
+proj_rda2_fu<-var_env[[1]]
+proj_rda2_fu[]<-as.vector(RDA2_proj_fu)
+proj_rda2_fu <- mask(proj_rda2_fu, range)
+diff_rda2<-rasterToPoints(crop(proj_rda2_fu-proj_rda2, extent(4.7, 8.199158, 42.6565, 46.85202)))
 
-## Distance between favourable pixels in the futur and present
-coord_fu<-as.data.frame(rasterToPoints(rda1_fu))
-coord_fu[,3]<-"futur"
-coord_pres<-as.data.frame(rasterToPoints(rda1))
-coord_pres[,3]<-"present"
-table<-rbind(coord_pres, coord_fu)
+p2 <- ggplot() + 
+  geom_polygon(data=country, aes(long, lat, group = group), colour = NA, fill = "gray95", size = 0.3) +
+  geom_raster(aes(x=diff_rda2[,1],y=diff_rda2[,2],fill=cut(abs(diff_rda2[,3]), breaks=c(0,1,2,3,4)))) + 
+  scale_fill_manual(values=colors(4)) +
+  geom_polygon(data=country, aes(long, lat, group = group), colour = "gray25", fill = NA, size = 0.3) +
+  xlab("Longitude") + ylab("Latitude") +
+  guides(fill=guide_legend(title="Genetic offset")) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank())
+
+## Offset present/future for RDA1 + RDA2
+diff_tot<-rasterToPoints(crop(proj_rda1_fu-proj_rda1, extent(4.7, 8.199158, 42.6565, 46.85202))-crop(proj_rda2_fu-proj_rda2, extent(4.7, 8.199158, 42.6565, 46.85202)))
+
+p_offset <- ggplot() + 
+  geom_polygon(data=country, aes(long, lat, group = group), colour = NA, fill = "gray95", size = 0.3) +
+  geom_raster(aes(x=diff_tot[,1],y=diff_tot[,2],fill=cut(abs(diff_tot[,3]), breaks=c(1,2,3,4,5)))) + 
+  scale_fill_manual(values=c(colors(4)[-4],"brown")) +
+  geom_polygon(data=country, aes(long, lat, group = group), colour = "gray25", fill = NA, size = 0.3) +
+  geom_point(data=EnvData, aes(x= Y, y= X), cex=0.7) +
+  xlab("Longitude") + ylab("Latitude") +
+  guides(fill=guide_legend(title="Genetic offset")) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank())
+
+#############################################################################
+
+################################################################################
+#### Geographic offset based on RDA scores in current and future conditions ####
+
+coord_fu1<-as.data.frame(rasterToPoints(rda2_fu))
+coord_fu1[,3]<-"futur"
+coord_pres1<-as.data.frame(rasterToPoints(rda2))
+coord_pres1[,3]<-"present"
+table1<-rbind(coord_pres1, coord_fu1)
+coord_fu2<-as.data.frame(rasterToPoints(rda2_fu))
+coord_fu2[,3]<-"futur"
+coord_pres2<-as.data.frame(rasterToPoints(rda2))
+coord_pres2[,3]<-"present"
+table2<-rbind(coord_pres2, coord_fu2)
 
 nb_classes <- 4
-dist_classes <- list()
-coord_classes <- list()
+dist_classes_rda1 <- list()
+dist_classes_rda2 <- list()
+coord_classes_rda1 <- list()
+coord_classes_rda2 <- list()
 for(i in 1:nb_classes)
 {
   RDA1_pres_classes<-var_env[[1]]
   RDA1_pres_classes[]<-NA
   RDA1_pres_classes[which(rda1[]>quantile(rda1[], probs= seq(0,1,1/nb_classes), na.rm=T)[i] & rda1[]<quantile(rda1[], probs= seq(0,1,1/nb_classes), na.rm=T)[i+1])]<-1
+  RDA2_pres_classes<-var_env[[1]]
+  RDA2_pres_classes[]<-NA
+  RDA2_pres_classes[which(rda2[]>quantile(rda2[], probs= seq(0,1,1/nb_classes), na.rm=T)[i] & rda2[]<quantile(rda2[], probs= seq(0,1,1/nb_classes), na.rm=T)[i+1])]<-1
   
   RDA1_fut_classes<-var_env[[1]]
   RDA1_fut_classes[]<-NA
   RDA1_fut_classes[which(rda1_fu[]>quantile(rda1[], probs= seq(0,1,1/nb_classes), na.rm=T)[i] & rda1_fu[]<quantile(rda1[], probs= seq(0,1,1/nb_classes), na.rm=T)[i+1])]<-1
+  RDA2_fut_classes<-var_env[[1]]
+  RDA2_fut_classes[]<-NA
+  RDA2_fut_classes[which(rda2_fu[]>quantile(rda2[], probs= seq(0,1,1/nb_classes), na.rm=T)[i] & rda2_fu[]<quantile(rda2[], probs= seq(0,1,1/nb_classes), na.rm=T)[i+1])]<-1
   
-  coord_fu_classes<-as.data.frame(rasterToPoints(RDA1_fut_classes))
-  coord_fu_classes[,3]<-"futur"
-  coord_pres_classes<-as.data.frame(rasterToPoints(RDA1_pres_classes))
-  coord_pres_classes[,3]<-"present"
-  table_classes<-rbind(coord_pres_classes, coord_fu_classes)
+  coord_fu_classes_rda1<-as.data.frame(rasterToPoints(RDA1_fut_classes))
+  coord_fu_classes_rda1[,3]<-"futur"
+  coord_pres_classes_rda1<-as.data.frame(rasterToPoints(RDA1_pres_classes))
+  coord_pres_classes_rda1[,3]<-"present"
+  table_classes_rda1<-rbind(coord_pres_classes_rda1, coord_fu_classes_rda1)  
+  coord_fu_classes_rda2<-as.data.frame(rasterToPoints(RDA2_fut_classes))
+  coord_fu_classes_rda2[,3]<-"futur"
+  coord_pres_classes_rda2<-as.data.frame(rasterToPoints(RDA2_pres_classes))
+  coord_pres_classes_rda2[,3]<-"present"
+  table_classes_rda2<-rbind(coord_pres_classes_rda2, coord_fu_classes_rda2)
   
-  dist_classes[[i]] <- 6371*nndist(table_classes[,1:2], by=as.factor(table_classes[,3]), k=1)[which(table_classes[,3]=="futur"),2]*pi/180
-  coord_classes[[i]] <- coord_fu_classes[,c(1,2)]
+  dist_classes_rda1[[i]] <- 6371*nndist(table_classes_rda1[,1:2], by=as.factor(table_classes_rda1[,3]), k=1)[which(table_classes_rda1[,3]=="futur"),2]*pi/180
+  coord_classes_rda1[[i]] <- coord_fu_classes_rda1[,c(1,2)]
+  dist_classes_rda2[[i]] <- 6371*nndist(table_classes_rda2[,1:2], by=as.factor(table_classes_rda2[,3]), k=1)[which(table_classes_rda2[,3]=="futur"),2]*pi/180
+  coord_classes_rda2[[i]] <- coord_fu_classes_rda2[,c(1,2)]
 }
 
-table <- data.frame(Distance = as.vector(unlist(dist_classes)), Coordinates = do.call(rbind, coord_classes), Cell = cellFromXY(rda1, do.call(rbind, coord_classes)))
+table_rda1 <- data.frame(Distance = as.vector(unlist(dist_classes_rda1)), Coordinates = do.call(rbind, coord_classes_rda1), Cell = cellFromXY(rda1, do.call(rbind, coord_classes_rda1)))
+table_rda2 <- data.frame(Distance = as.vector(unlist(dist_classes_rda2)), Coordinates = do.call(rbind, coord_classes_rda2), Cell = cellFromXY(rda2, do.call(rbind, coord_classes_rda2)))
 
-dDIST <- rda1
-dDIST[] <- NA
-dDIST[table$Cell]<-table$Distance
-dDIST[which(rda1_fu[]<quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[1] | rda1_fu[]>quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[2] | rda2_fu[]<quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[1] | rda2_fu[]>quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[2])] <- NA
-dDIST <- crop(dDIST, extent(c(4.7, 8.199158, 42.6565, 46.85202)))
+dDIST_rda1 <- rda1
+dDIST_rda1[] <- NA
+dDIST_rda1[table_rda1$Cell]<-table_rda1$Distance
+dDIST_rda2 <- rda2
+dDIST_rda2[] <- NA
+dDIST_rda2[table_rda2$Cell]<-table_rda2$Distance
+
+dDIST <- mean(dDIST_rda1, dDIST_rda2, na.rm = T)
 
 mat_dDIST<-rasterToPoints(dDIST)
-p2 <- ggplot() + 
-  geom_raster(aes(x=mat_dDIST[,1],y=mat_dDIST[,2],fill= mat_dDIST[,3])) + 
-  scale_fill_gradient(low = "#FFEDA0", high = "red") +
-  geom_polygon(aes(x = country.df$long, y = country.df$lat, group=country.df$group), color="black", alpha=0) +
-  geom_point(aes(x= cities@coords[,1], y=cities@coords[,2]), size=1) +
-  geom_text(aes(x= cities@coords[,1]+0.05, y=cities@coords[,2]+0.05, label=cities$CITY_NAME), size=3.5) +
+p_dist <- ggplot() + 
+  geom_polygon(data=country, aes(long, lat, group = group), colour = NA, fill = "gray95", size = 0.3) +
+  geom_raster(aes(x=mat_dDIST[,1],y=mat_dDIST[,2],fill= cut(mat_dDIST[,3], breaks=c(-1,5,10,15,20,25,30,35,40,45,50)))) + 
+  scale_fill_manual(values=colors(10)) +
+  geom_polygon(data=country, aes(long, lat, group = group), colour = "gray25", fill = NA, size = 0.3) +
+  geom_point(data=EnvData, aes(x= Y, y= X), cex=0.7) +
   xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Distance from present equivalent genetic composition") +
-  guides(fill=guide_legend(title="D")) +
+  guides(fill=guide_legend(title="Distance \n from similar \n current conditions")) +
   theme_bw() +
   theme(panel.grid.major = element_blank())
 
+###########################################################################
+                    
+################################################
+#### PAI and SGV in the sampled populations ####
 
-## Demo-genetic index for RDA1
-toto <- as.matrix(rda1)
-toto_fu <- as.matrix(rda1_fu)
+mean_q <- apply(1-FreqData[, outliers_rdadapt_pop], 2, mean)
 
-invDist <- matrix(0, ncol=401, nrow=401)
-for(i in 1:401) {
-  for(j in 1:401) {
-    invDist[i,j] <- dist(rbind(c(201,201), c(i,j)))+1
-  }
-}
-dist <- invDist
+# Population adaptive index (Bonin et al. 2007) 
+PAI <- lapply(1:nrow(FreqData), function(x) sum(abs((1-FreqData[x,outliers_rdadapt_pop])-mean_q), na.rm=T))
+names(PAI) <- row.names(FreqData)
 
-library(foreach)
-library(doParallel)
+SVG <- lapply(lapply(1:nrow(FreqData), function(x) FreqData[x,outliers_rdadapt_pop]*(1-FreqData[x,outliers_rdadapt_pop])), function(y) mean(unlist(y)))
+names(SVG) <- row.names(FreqData)
 
-value <- matrix(NA, nrow(toto), ncol(toto))
-combi = expand.grid(x = 1:ncol(value), y = 1:nrow(value))
+TAB <- data.frame(Name = EnvData$Group.1, Latitude = EnvData$X, Longitude = EnvData$Y, PAI = unlist(PAI), SVG = unlist(SVG))
 
-registerDoParallel(cores = 12)
-RES = foreach(x = combi$x, y = combi$y, .combine = "rbind") %dopar% {
-  pixel = c(x,y)
-  ind_x_min = max(x - 200, 1)
-  ind_x_max = min(x + 200, ncol(value))
-  ind_y_min = max(y - 200, 1)
-  ind_y_max = min(y + 200, nrow(value))
-  diff <- toto[ind_y_min:ind_y_max, ind_x_min:ind_x_max]-toto_fu[y,x]
-  
-  ind_x_min = ifelse(ind_x_min==1, abs(x - 201) + 1, 1)
-  ind_x_max = ifelse(ind_x_max==ncol(value), 201 + (ncol(value)- x), 401)
-  ind_y_min = ifelse(ind_y_min==1, abs(y - 201) + 1, 1)
-  ind_y_max = ifelse(ind_y_max==nrow(value), 201  + (nrow(value) - y), 401)
-  res <- sum(diff/dist[ind_y_min:ind_y_max, ind_x_min:ind_x_max],na.rm=T)/sum(!is.na(diff))
-  return(data.frame(x=x,y=y,res=res))
-}
-
-MAT = matrix(abs(RES$res), nrow = nrow(toto), ncol = ncol(toto), byrow=T)
-
-PROB <- rda1
-PROB[] <- MAT
-PROB[which(rda1_fu[]<quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[1] | rda1_fu[]>quantile(extract(rda1, occurences), probs= c(0.01, 0.99))[2] | rda2_fu[]<quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[1] | rda2_fu[]>quantile(extract(rda2, occurences), probs= c(0.01, 0.99))[2])] <- NA
-PROB <- crop(PROB, extent(c(4.7, 8.199158, 42.6565, 46.85202)))
-
-
-mat_PROB<-rasterToPoints(PROB)
-p3 <- ggplot() + 
-  geom_raster(aes(x=mat_PROB[,1],y=mat_PROB[,2],fill=mat_PROB[,3])) + 
-  scale_fill_gradient(low = "#FFEDA0", high = "red", limits = c(0,0.06)) +
-  geom_polygon(aes(x = country.df$long, y = country.df$lat, group=country.df$group), color="black", alpha=0) +
-  geom_point(aes(x= cities@coords[,1], y=cities@coords[,2]), size=1) +
-  geom_text(aes(x= cities@coords[,1]+0.05, y=cities@coords[,2]+0.05, label=cities$CITY_NAME), size=3.5) +
+p_SGV <- ggplot() +
+  geom_polygon(data=country, aes(long, lat, group = group), colour = NA, fill = "gray95", size = 0.3) +
+  geom_raster(aes(x=mat_dDIST[,1],y=mat_dDIST[,2],fill="gray75"), fill="gray75") +
+  #geom_polygon(data=range, aes(long, lat, group = group), colour = NA, fill = "gray75", size = 0.3) +
+  geom_polygon(data=country, aes(long, lat, group = group), colour = "gray35", fill = NA, size = 0.3) +
+  geom_point(data=TAB, aes(x= Longitude, y= Latitude, size = SVG, colour = PAI)) + 
+  scale_color_gradient(low="#FFEDA0", high = "red") +
   xlab("Longitude") + ylab("Latitude") +
-  guides(fill=guide_legend(title="P")) +
-  ggtitle("Difficulty of adaptation") +
   theme_bw() +
   theme(panel.grid.major = element_blank())
 
-pdf("./ClimateResponse_Fagus.pdf", width = 12, height = 5)
-ggarrange(p1, p2, p3, ncol=3, nrow=1, widths = c(1,1,1), labels=c("A", "B", "C"))
+g1 <- ggplotGrob(p_offset)
+g2 <- ggplotGrob(p_dist)
+g3 <- ggplotGrob(p_SGV)
+g = cbind(g1, g2, g3, size = "first")
+
+pdf("./GeneticOffset_Distance_SGV_Fagus.pdf", width = 12, height = 4)
+grid.newpage()
+grid.draw(g)
 dev.off()
+
+################################################
+                 
